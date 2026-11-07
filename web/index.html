@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hackathon App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Hackathon App</h1>
+        <span id="provider" class="badge">checking…</span>
+      </header>
+      <p class="sub">Replace this page with the demo. It calls <code>POST /api/generate</code>.</p>
+
+      <form id="form">
+        <textarea id="prompt" rows="4" placeholder="Ask something…" required></textarea>
+        <button type="submit" id="go">Generate</button>
+      </form>
+
+      <section id="out" aria-live="polite"></section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

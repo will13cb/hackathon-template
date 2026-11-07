@@ -1,0 +1,30 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*credentials*.json
+*service*account*.json
+application_default_credentials.json
+terraform.tfstate*
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# node
+node_modules/
+dist/
+
+# claude code (personal settings stay local; shared settings.json is committed)
+.claude/settings.local.json
+
+# os/editor
+.DS_Store
+.idea/
+.vscode/

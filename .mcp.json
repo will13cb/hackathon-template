@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "aws": {
+      "command": "uvx",
+      "args": [
+        "mcp-proxy-for-aws@latest",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--metadata",
+        "AWS_REGION=${AWS_REGION:-us-east-1}"
+      ],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE:-hackathon}",
+        "AWS_REGION": "${AWS_REGION:-us-east-1}",
+        "FASTMCP_LOG_LEVEL": "WARNING"
+      }
+    },
+    "aws-knowledge": {
+      "type": "http",
+      "url": "https://knowledge-mcp.global.api.aws"
+    },
+    "cloud-run": {
+      "command": "npx",
+      "args": ["-y", "@google-cloud/cloud-run-mcp"],
+      "env": {
+        "GOOGLE_CLOUD_PROJECT": "${GCP_PROJECT:-}",
+        "GOOGLE_CLOUD_REGION": "${GCP_REGION:-us-central1}",
+        "DEFAULT_SERVICE_NAME": "${SERVICE_NAME:-hack-app}"
+      }
+    },
+    "gcloud": {
+      "command": "npx",
+      "args": ["-y", "@google-cloud/gcloud-mcp"]
+    }
+  }
+}

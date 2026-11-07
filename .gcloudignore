@@ -1,0 +1,3 @@
+# Used by `gcloud run deploy --source .` (Cloud Build upload). Mirrors .dockerignore.
+#!include:.dockerignore
+.gcloudignore
