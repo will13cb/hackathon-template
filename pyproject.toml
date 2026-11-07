@@ -8,4 +8,5 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]   # so `pytest` (not just `python -m pytest`) can import api.*
 addopts = "-q"
