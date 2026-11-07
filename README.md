@@ -6,6 +6,8 @@ A starter for cloud hackathons, prepared before the event. It contains **scaffol
 - **Claude Code wired to both clouds:** `.mcp.json` (AWS MCP Server, AWS Knowledge, Cloud Run, gcloud), hooks for guardrails, and skills for repeatable procedures.
 - **Built for parallel work:** git worktrees per lane, an API contract in `CLAUDE.md`, and a `/sync` skill.
 
+> **New here or joining a team? Read [docs/PLAYBOOK.md](docs/PLAYBOOK.md)**: a repo tour plus every step from arriving at the event to submitting.
+>
 > When you replace this README for a project, use the "Submission README" outline in [docs/DEMO.md](docs/DEMO.md).
 
 ## Quick start
@@ -62,6 +64,8 @@ docs/                      SETUP (week before), DEMO (pitch + submission), archi
 **Escape hatch:** the guard only applies to Claude. Run destructive commands yourself in a normal terminal (e.g. `make teardown-aws`).
 
 ## Hackathon-day playbook
+
+Summary below. Full commands, partner onboarding, and submission steps are in [docs/PLAYBOOK.md](docs/PLAYBOOK.md).
 
 | When | Do |
 |---|---|
