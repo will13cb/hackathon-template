@@ -11,9 +11,9 @@ active="$(printf '%s' "$input" | python3 -c 'import json,sys; print(str(json.loa
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 cd "$root" || exit 0
 
-# Only run if code changed (tracked edits or new files) in api/, tests/, or web/.
+# Only run if code changed: any Python file, web/, or requirements (tracked edits or new files).
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  changed="$(git status --porcelain -- api tests web requirements.txt 2>/dev/null)"
+  changed="$(git status --porcelain -- '*.py' web 'requirements*.txt' 2>/dev/null)"
   [ -z "$changed" ] && exit 0
 fi
 

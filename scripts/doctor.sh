@@ -23,8 +23,12 @@ echo "Config (.env)"
 [[ "${SERVICE_NAME:-hack-app}" == hack-* ]] && ok "SERVICE_NAME=${SERVICE_NAME:-hack-app}" \
   || warn "SERVICE_NAME doesn't start with hack-, so the IAM policy won't match"
 
+CLOUD="${CLOUD:-both}"   # set by make use-aws / use-gcp
+
 echo "AWS"
-if command -v aws >/dev/null; then
+if [ "$CLOUD" = gcp ]; then
+  ok "skipped (CLOUD=gcp)"
+elif command -v aws >/dev/null; then
   if id="$(AWS_PROFILE="${AWS_PROFILE:-hackathon}" aws sts get-caller-identity --query Arn --output text 2>/dev/null)"; then
     ok "profile ${AWS_PROFILE:-hackathon} → $id"
     AWS_PROFILE="${AWS_PROFILE:-hackathon}" aws iam get-role --role-name "${SERVICE_NAME:-hack-app}-lambda-role" >/dev/null 2>&1 \
@@ -35,7 +39,9 @@ if command -v aws >/dev/null; then
 fi
 
 echo "Google Cloud"
-if command -v gcloud >/dev/null; then
+if [ "$CLOUD" = aws ]; then
+  ok "skipped (CLOUD=aws)"
+elif command -v gcloud >/dev/null; then
   acct="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)"
   [ -n "$acct" ] && ok "gcloud account $acct" || bad "not logged in: gcloud auth login"
   gcloud auth application-default print-access-token >/dev/null 2>&1 && ok "ADC (for Vertex locally + MCP)" \

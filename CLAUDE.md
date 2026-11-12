@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 > Fill in every `TODO` at the start of the hackathon (takes 10 minutes). Everything else is the standing setup.
+> Agents (Claude, Codex, Gemini: `AGENTS.md` and `GEMINI.md` point here): read `CONTEXT.md` too.
 
 ## Project
 - **Hackathon:** TODO (name, track, deadline with timezone)
@@ -54,6 +55,8 @@ TODO: add project endpoints here
 5. **Keep the sponsor's product central and visible** (in the UI, logs, and README).
 6. **Stay in your lane in worktrees:** frontend edits `web/`, backend edits `api/` + `tests/`, infra edits `deploy/` + `Dockerfile`. Only `main` edits `requirements*.txt`, `Makefile`, and this file.
 7. Keep tests fast (<10s). A Stop hook runs them after every turn.
+8. **Don't read secrets.** Never `cat`/`grep`/`source` `.env` or credentials, or dump `env`. Run `make <target>`: it loads `.env` for that command. The guard blocks the common cases.
+9. **Facts go in `CONTEXT.md`.** Something you checked (an API works, a model is enabled, a rule is confirmed) goes under "Verified" with how. Never state an "Assumed" item as fact.
 
 ## Status / decisions log
 - TODO: append one line per significant decision (why, not what).

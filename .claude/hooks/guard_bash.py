@@ -203,6 +203,136 @@ def check_secrets(tokens: list[str], cmd: str, cwd: str) -> None:
             )
 
 
+# --- what part of the command actually executes? ------------------------------------
+# Agents write docs with heredocs and commit messages that *mention* dangerous commands
+# ("never git push --force"). Matching the raw text blocks those. So before matching we drop
+# (1) heredoc bodies that are only data (cat > file <<EOF) and (2) quoted prose (quoted strings
+# containing whitespace). Anything that can execute is kept: heredocs fed to a shell or
+# interpreter, `bash -c "..."` / `eval "..."`, and double quotes containing $(...) or `...`.
+# This guard catches accidents; it is not a sandbox against a determined adversary.
+
+INTERPRETERS = {
+    "bash", "sh", "zsh", "dash", "ksh", "fish", "eval", "source", ".",
+    "python", "python3", "node", "ruby", "perl", "xargs", "env", "sudo", "ssh",
+}  # fmt: skip
+HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][\w-]*)\2")
+QUOTED = re.compile(r"'[^']*'|\"(?:[^\"\\]|\\.)*\"")
+RUNS_ITS_ARG = re.compile(r"(?:\s-\w*c|\beval|\bsh|\bbash|\bzsh)\s*$")
+
+
+def _word(text: str) -> str:
+    """First word of the last shell segment in `text`, without its path."""
+    seg = re.split(r"\|\||&&|[;|&(]", text)[-1].split()
+    return seg[0].rsplit("/", 1)[-1] if seg else ""
+
+
+def strip_heredocs(cmd: str) -> str:
+    """Remove heredoc bodies that are only data; keep the ones a shell/interpreter runs."""
+    out, pos = [], 0
+    for m in HEREDOC.finditer(cmd):
+        if m.start() < pos:
+            continue  # inside a body already removed
+        line_start = cmd.rfind("\n", 0, m.start()) + 1
+        line_end = cmd.find("\n", m.end())
+        if line_end == -1:
+            continue
+        dash, delim = m.group(1), m.group(3)
+        term = re.compile(rf"^{'[ \t]*' if dash else ''}{re.escape(delim)}[ \t]*$", re.M)
+        t = term.search(cmd, line_end + 1)
+        if not t:
+            continue
+        piped_to = cmd[m.end() : line_end].split("|")[1:]
+        if _word(cmd[line_start : m.start()]) in INTERPRETERS or any(
+            _word(p) in INTERPRETERS for p in piped_to
+        ):
+            continue  # the body is executed: keep it
+        out.append(cmd[pos : line_end + 1])
+        pos = t.start()  # resume at the terminator line
+    out.append(cmd[pos:])
+    return "".join(out)
+
+
+def strip_prose(cmd: str) -> str:
+    """Blank out quoted strings that are prose (contain whitespace) and can't execute."""
+
+    def repl(m: re.Match) -> str:
+        q = m.group(0)
+        if not re.search(r"\s", q):
+            return q[1:-1]  # "--force", "/" etc.: unquote so the patterns see them
+        if RUNS_ITS_ARG.search(cmd[: m.start()]):
+            return q  # bash -c "...", eval "..."
+        if q.startswith('"') and ("$(" in q or "`" in q):
+            return q  # command substitution runs
+        return "''"
+
+    return QUOTED.sub(repl, cmd)
+
+
+# --- reading secrets ------------------------------------------------------------------
+# settings.json `Read(./.env)` deny rules only cover Claude's Read tool, not Bash. This closes
+# the common accidental paths (cat .env, grep KEY .env, source .env, printenv, python -c ...).
+# It is a speed bump, not a boundary: the real protection is short-lived, least-privilege creds.
+
+READERS = {
+    "cat", "less", "more", "head", "tail", "grep", "egrep", "fgrep", "rg", "sed", "awk",
+    "strings", "xxd", "od", "hexdump", "base64", "nl", "tac", "bat", "cut", "sort", "diff",
+    "vi", "vim", "nano", "source", ".", "cp", "mv", "scp", "rsync", "tee", "jq", "yq",
+}  # fmt: skip
+PATTERN_FIRST = {"grep", "egrep", "fgrep", "rg", "sed", "awk", "jq", "yq"}  # 1st arg = pattern
+COPIERS = {"cp", "mv", "scp", "rsync"}  # last arg = destination, may legitimately be .env
+CODE_RUNNERS = {"python", "python3", "node", "ruby", "perl", "php"}
+SECRET_IN_CODE = re.compile(
+    r"(?<![\w.-])\.env(?!\.(?:example|sample|template)\b)(?:\.[\w.-]+)?(?![\w-])"
+    r"|\.aws/credentials|\bid_(?:rsa|ed25519)\b|[\w-]+\.(?:pem|p12|pfx)\b"
+)
+SEPARATORS = {";", "&&", "||", "|", "&"}
+
+
+def _segments(tokens: list[str]):
+    seg: list[str] = []
+    for t in tokens:
+        if t in SEPARATORS:
+            if seg:
+                yield seg
+            seg = []
+        else:
+            seg.append(t)
+    if seg:
+        yield seg
+
+
+def check_secret_reads(tokens: list[str], code: str, cmd: str) -> None:
+    for seg in _segments(tokens):
+        word = seg[0].rsplit("/", 1)[-1]
+        args = seg[1:]
+        if word == "printenv" or (word == "env" and all(a.startswith("-") for a in args)):
+            block(f"`{word}` dumps environment variables, which can include secrets", cmd)
+        # input redirection from a secret file: `< .env`, `<.env`
+        for i, t in enumerate(seg):
+            target = seg[i + 1] if t == "<" and i + 1 < len(seg) else t[1:] if t[:1] == "<" else ""
+            if target and SECRET_NAME.search(target):
+                block(f"reading a secret file ({target}) via redirection", cmd)
+        if word not in READERS:
+            continue
+        files = [a for a in args if not a.startswith("-")]
+        if word in PATTERN_FIRST and files:
+            files = files[1:]
+        if word in COPIERS and files:
+            files = files[:-1]
+        for f in files:
+            if SECRET_NAME.search(f):
+                block(
+                    f"reading a secret file ({f}). Use `make <target>` (it loads .env for the "
+                    "command) instead of reading secrets into the conversation",
+                    cmd,
+                )
+    words = {s[0].rsplit("/", 1)[-1] for s in _segments(tokens)}
+    if words & CODE_RUNNERS:
+        m = SECRET_IN_CODE.search(code)
+        if m:
+            block(f"script that references a secret file ({m.group(0)})", cmd)
+
+
 def main() -> None:
     try:
         data = json.load(sys.stdin)
@@ -212,10 +342,13 @@ def main() -> None:
         sys.exit(0)
     cmd = (data.get("tool_input") or {}).get("command", "") or ""
     cwd = data.get("cwd") or "."
-    tokens = tokenize(cmd)
-    check_patterns(cmd)
+    code = strip_heredocs(cmd)  # what runs (heredoc data removed)
+    prose_free = strip_prose(code)  # ...and quoted prose removed, for regex checks
+    tokens = tokenize(code)
+    check_patterns(prose_free)
     check_rm(tokens, cmd)
-    check_secrets(tokens, cmd, cwd)
+    check_secrets(tokens, prose_free, cwd)
+    check_secret_reads(tokens, code, cmd)
     sys.exit(0)
 
 

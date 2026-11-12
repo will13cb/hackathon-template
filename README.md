@@ -32,6 +32,8 @@ Inside Claude Code: `/deploy gcp`, `/sync`, `/demo-check`.
 
 ```
 CLAUDE.md                  Project brief + rules + API contract (fill the TODOs at hour 0)
+AGENTS.md, GEMINI.md       Symlinks to CLAUDE.md, so Codex / Gemini CLI get the same brief
+CONTEXT.md                 Shared facts: Verified vs Assumed
 .mcp.json                  MCP servers, shared with teammates; uses ${ENV} expansion, so no IDs in git
 .claude/settings.json      Hooks + safe-command allowlist
 .claude/hooks/
@@ -48,7 +50,7 @@ web/                       Static HTML/JS, no build step
 tests/                     pytest smoke tests (<2s, offline)
 Dockerfile                 python:3.12-slim + Lambda Web Adapter (same image on both clouds)
 deploy/                    Cloud Run + Lambda deploy scripts, AWS bootstrap, teardown, IAM policy
-scripts/                   doctor (preflight), worktrees, scan-secrets
+scripts/                   doctor (preflight), worktrees, scan-secrets, use_cloud (make use-aws|gcp), pin_mcp
 docs/                      SETUP (week before), DEMO (pitch + submission), architecture diagram
 ```
 
@@ -62,6 +64,8 @@ docs/                      SETUP (week before), DEMO (pitch + submission), archi
 `CLAUDE.md` says *why* (the rules). Hooks make the rules impossible to break. `/deploy` and `/sync` have side effects, so they only run when **you** type them (`disable-model-invocation`).
 
 **Escape hatch:** the guard only applies to Claude. Run destructive commands yourself in a normal terminal (e.g. `make teardown-aws`).
+
+**What the guard is, and isn't.** It blocks the common *accidents*: cloud deletes, force-push, committing keys, and reading secrets into the conversation (`cat .env`, `grep KEY .env`, `source .env`, `printenv`, `python -c "open('.env')"`). The `Read(./.env)` deny rules in `settings.json` only cover Claude's Read tool, which is why the guard checks Bash too. It is a speed bump, **not a security boundary**: a determined agent can get around pattern matching (symlinks, unusual interpreters, `grep -r .`). The real protection is what's *in* `.env`: prefer SSO / short-lived credentials, use the least-privilege IAM user (`deploy/iam/`), never your admin keys, and rotate anything that leaks.
 
 ## Hackathon-day playbook
 

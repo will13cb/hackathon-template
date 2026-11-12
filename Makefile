@@ -4,7 +4,7 @@ ENV   := set -a; [ -f .env ] && . ./.env; set +a;
 PY    := .venv/bin/python
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev test fmt lint docker-run claude doctor deploy-gcp deploy-aws aws-bootstrap \
+.PHONY: help setup use-aws use-gcp pin-mcp dev test fmt lint docker-run claude doctor deploy-gcp deploy-aws aws-bootstrap \
 	    logs-gcp logs-aws worktrees scan teardown-gcp teardown-aws
 
 help: ## List targets
@@ -15,6 +15,15 @@ setup: ## Create .venv, install deps, create .env from template
 	 else python3 -m venv .venv && $(PY) -m pip install -q --upgrade pip && $(PY) -m pip install -q -r requirements-dev.txt; fi
 	@[ -f .env ] || { cp .env.example .env; echo "created .env, fill it in"; }
 	@echo "setup done"
+
+use-aws: ## Kickoff: keep AWS, delete the GCP scaffolding
+	@python3 scripts/use_cloud.py aws
+
+use-gcp: ## Kickoff: keep GCP, delete the AWS scaffolding
+	@python3 scripts/use_cloud.py gcp
+
+pin-mcp: ## Pin MCP server versions in .mcp.json (run the week before, commit)
+	@python3 scripts/pin_mcp.py
 
 dev: ## Run locally with reload on :8080
 	@$(ENV) $(PY) -m uvicorn api.app.main:app --reload --port 8080

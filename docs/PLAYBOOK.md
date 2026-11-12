@@ -32,6 +32,7 @@ Step-by-step from "template on GitHub" to "public repo submitted", plus a short 
    - install `uv`, the AWS CLI and `gcloud`
    - fill in `.env`, then run `make doctor` until nothing is red
    - deploy once to each cloud, then tear down
+3. `make pin-mcp`, check that `/mcp` in Claude Code shows the servers connected, and commit `.mcp.json`. No `@latest` surprises on event morning.
 
 ## 1. When you arrive
 
@@ -41,8 +42,9 @@ Step-by-step from "template on GitHub" to "public repo submitted", plus a short 
    cd my-event-project && make setup
    ```
 2. Create a **fresh GCP project** (or a clean AWS account), redeem the organizers' credits, and set a **billing alert**.
-3. Fill in `.env`, then run `make doctor`.
-4. Deploy hello-world right away (`make deploy-gcp` or `make deploy-aws`) to prove deploys work on the venue network.
+3. Once you know the sponsor cloud: `make use-aws` or `make use-gcp`. It deletes the other cloud's scripts, MCP servers, SDK and `.env` keys, so `make doctor` only checks what you use. Commit.
+4. Fill in `.env`, then run `make doctor`.
+5. Deploy hello-world right away (`make deploy-gcp` or `make deploy-aws`) to prove deploys work on the venue network.
 
 ## 2. Joining as a partner
 
