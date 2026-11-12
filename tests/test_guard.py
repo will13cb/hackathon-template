@@ -52,6 +52,9 @@ BLOCKED = [
     "env | grep AWS",
     "python3 -c \"print(open('.env').read())\"",
     "python3 - <<'EOF'\nprint(open('.env').read())\nEOF",
+    "python3 -c \"from pathlib import Path; print(Path('./.env.local').read_text())\"",
+    "node -e \"console.log(require('fs').readFileSync('.env','utf8'))\"",
+    "python3 -c \"print(open('/home/me/.aws/credentials').read())\"",
 ]
 
 ALLOWED = [
@@ -72,6 +75,8 @@ ALLOWED = [
     "env LLM_PROVIDER=mock pytest",
     "make deploy-aws",
     "python3 -c 'print(1)'",
+    "python3 - <<'EOF'\nprint('docs: never cat .env, use make')\nEOF",  # mentions, doesn't open
+    "python3 -c \"open('.env.example').read()\"",
 ]
 
 

@@ -281,9 +281,12 @@ READERS = {
 PATTERN_FIRST = {"grep", "egrep", "fgrep", "rg", "sed", "awk", "jq", "yq"}  # 1st arg = pattern
 COPIERS = {"cp", "mv", "scp", "rsync"}  # last arg = destination, may legitimately be .env
 CODE_RUNNERS = {"python", "python3", "node", "ruby", "perl", "php"}
+# A string literal that IS a path to a secret file: open('.env'), Path("~/.aws/credentials").
+# Prose that merely mentions .env (docs edits, messages) doesn't match.
 SECRET_IN_CODE = re.compile(
-    r"(?<![\w.-])\.env(?!\.(?:example|sample|template)\b)(?:\.[\w.-]+)?(?![\w-])"
-    r"|\.aws/credentials|\bid_(?:rsa|ed25519)\b|[\w-]+\.(?:pem|p12|pfx)\b"
+    r"""(['"])(?:[\w.~/-]*/)?"""
+    r"""(?:\.env(?:\.(?!(?:example|sample|template)\1)[\w.-]+)?|\.aws/credentials"""
+    r"""|id_(?:rsa|ed25519)|[\w-]+\.(?:pem|p12|pfx))\1"""
 )
 SEPARATORS = {";", "&&", "||", "|", "&"}
 
